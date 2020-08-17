@@ -205,7 +205,6 @@ class ProjectController(app_manager.RyuApp):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
-
         for sw, in_port, out_port in p:
             datapath = self.datapath_dict[int(sw)]
             print (src_mac,"->", dst_mac, "via ", sw, " in_port=", in_port, " out_port=", out_port)
