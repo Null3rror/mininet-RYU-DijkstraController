@@ -276,8 +276,8 @@ class ProjectController(app_manager.RyuApp):
         self.mac_to_port[dpid][src] = in_port
         # if the destination mac address isn't already learned, FLOOD.
         if not dst in self.mac_to_port[dpid]:
-            print("----> ", eth.ethertype, src , dst)
-            print("---->  ", int(mymac[src][0]), mymac[src][1], dpid)
+            # print("----> ", eth.ethertype, src , dst)
+            # print("---->  ", int(mymac[src][0]), mymac[src][1], dpid)
             out_port = ofproto.OFPP_FLOOD
         else:
             print("----> ", eth.ethertype, src , dst)
