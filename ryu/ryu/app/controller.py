@@ -118,7 +118,11 @@ def get_path (src,dst,first_port,final_port):
 
 
 
+
     # Now add the ports to path
+    # by adjacency matrix and shortest path that was found with dijkstra algorithm
+    # for each switch we know its next switch so we try to find its port in adjacency matrix
+    # and append it to r
     r = []
     in_port = first_port
     for s1,s2 in zip(path[:-1],path[1:]):
@@ -137,7 +141,7 @@ class ProjectController(app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(ProjectController, self).__init__(*args, **kwargs)
-        # it is a dict<dict<int, int>>. which the first key contains id of switch, and the second key is mac address of a host, and finally the value contains a port number of that switch
+        # it is a dict<int, dict<int, int>>. which the first key contains id of switch, and the second key is mac address of a host, and finally the value contains a port number of that switch
         # for example mac_to_port[2][00:00:00:00:00:01] = 2, means that in s2(which is a switch), host with mac address of 00:00:00:00:00:01, is connected to s2 form s2's second port(eth2)
         self.mac_to_port = {}
         # used to get info from our topology. we get list of switches and list of links
@@ -163,8 +167,9 @@ class ProjectController(app_manager.RyuApp):
         ofproto = datapath.ofproto
         # indicates the ofproto_parser module
         parser = datapath.ofproto_parser
-        # Now that Simple Switch is notified of the attached switch, it will install a table-miss flow.
+        # Now that controller is notified of the attached switch, it will install a table-miss flow.
         # This allows any traffic not handled by the current flow entries in the switch to be sent to the controller.
+        # parser.OFPMatch() means that it'll match any packet.
         match = parser.OFPMatch()
         # In the instruction of this entry, by specifying the output action to output to the controller port,
         # in case the received packet does not match any of the normal flow entries, Packet-In is issued.
@@ -271,9 +276,11 @@ class ProjectController(app_manager.RyuApp):
         self.mac_to_port[dpid][src] = in_port
         # if the destination mac address isn't already learned, FLOOD.
         if not dst in self.mac_to_port[dpid]:
+            print("----> ", eth.ethertype, src , dst)
+            print("---->  ", int(mymac[src][0]), mymac[src][1], dpid)
             out_port = ofproto.OFPP_FLOOD
         else:
-            # print("223 ----> ", eth.ethertype, src , dst)
+            print("----> ", eth.ethertype, src , dst)
             # use dijkstra to find the shortest path from src to dst.
             p = get_path(int(mymac[src][0]), int(mymac[dst][0]), mymac[src][1], mymac[dst][1])
             print (p)
