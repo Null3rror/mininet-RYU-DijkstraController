@@ -40,11 +40,11 @@ mymac={}
 #adjacency map [sw1][sw2]->port from sw1 to sw2
 adjacency=defaultdict(lambda:defaultdict(lambda:None))
 
-# """
-#   finding minimum weight node in network and returning it
-# """
+# finding minimum weight node in network and returning it
+# weight of node is the total weight of path that crossed form src to this nodes so far
+# if node weight are inf it means that this node wasn't reached from src in this level
 def minimum_distance(distance, Q):
-    print("minimum_distance(distance, Q) is called!= ", distance, Q)
+    # print("minimum_distance(distance, Q) is called!= ", distance, Q)
     min = float('Inf')
     node = 0
     for v in Q:
@@ -55,10 +55,8 @@ def minimum_distance(distance, Q):
     return node
 
 
-# """
-#   finding shortest path from src to dst by running dijkstra algorithm
-#   after finding shortest path, return shortest path by id and ports
-# """
+# finding shortest path from src to dst by running dijkstra algorithm
+# after finding shortest path, return shortest path by id and ports
 def get_path (src,dst,first_port,final_port):
     print("get_path is called!")
     #Dijkstra's algorithm
@@ -67,6 +65,7 @@ def get_path (src,dst,first_port,final_port):
     distance = {}
     previous = {}
 
+    # initializing switches's distance and previous list
     for dpid in switches:
         distance[dpid] = float('Inf')
         previous[dpid] = None
@@ -76,22 +75,26 @@ def get_path (src,dst,first_port,final_port):
     print ("Q=", Q)
 
 
-    #running dijkstra algorithm
+    # running dijkstra algorithm
+    # first finding minimum weighted switch
+    # removing from queue and finding its neighbour weights
+    # repeat algho till queue become null
     while len(Q)>0:
         u = minimum_distance(distance, Q)
         print("u= ", u)
         Q.remove(u)
 
+        # finding neighbour of selected node's weight
         for p in switches:
           if adjacency[u][p]!=None:
             print("port: adjacency from u to p = ", adjacency[u][p])
-            w = 1 #>>????? get this from adjacency matrix
+            w = 1 #>>????? get this from adjacency matrix, we suppose that weight of nodes are 1
             if distance[u] + w < distance[p]:
               distance[p] = distance[u] + w
               previous[p] = u
 
 
-    # appending shortest path from src to dest to r
+    # appending shortest path from dest to src to r
     r=[]
     p=dst
     r.append(p)
@@ -106,6 +109,7 @@ def get_path (src,dst,first_port,final_port):
         r.append(p)
         q=previous[p]
 
+    #since we get path from dest to src we need to reverse the list
     r.reverse()
     if src==dst:
         path=[src]
@@ -114,7 +118,7 @@ def get_path (src,dst,first_port,final_port):
 
 
 
-    # Now add the ports
+    # Now add the ports to path
     r = []
     in_port = first_port
     for s1,s2 in zip(path[:-1],path[1:]):
@@ -122,6 +126,7 @@ def get_path (src,dst,first_port,final_port):
         r.append((s1,in_port,out_port))
         in_port = adjacency[s2][s1]
     r.append((dst,in_port,final_port))
+
     return r
 
 
@@ -196,7 +201,10 @@ class ProjectController(app_manager.RyuApp):
 
 
 
-
+    # after finding shortest path by dijkstra,
+    # with this function, trying to save the output of dijkstra path that has been declared,
+    # in the flow_table for each switch we define that if src_mac and dst_mac are these then
+    # use this flow (path).
     def install_path(self, p, ev, src_mac, dst_mac):
 
         print ("install_path is called")
@@ -206,6 +214,7 @@ class ProjectController(app_manager.RyuApp):
         parser = datapath.ofproto_parser
 
         for sw, in_port, out_port in p:
+            #getting datapath of each switch to find out its port
             datapath = self.datapath_dict[int(sw)]
             print (src_mac,"->", dst_mac, "via ", sw, " in_port=", in_port, " out_port=", out_port)
             # Unlike the Table-miss flow entry, set conditions for match this time. the receive port (in_port) and destination MAC address (eth_dst) have been specified.
@@ -314,9 +323,12 @@ class ProjectController(app_manager.RyuApp):
         #getting list of objects link
         links_list = get_link(self.topology_api_app, None)
 
-        #creating
+        #creating list of connections in network as (srcId, destId, src_port, dest_port)
         mylinks= [(link.src.dpid, link.dst.dpid, link.src.port_no, link.dst.port_no) for link in links_list]
 
+        #setting adjacency graph as matrix in which each element in matrix is equal to port that index in first is routed to second
+        #for example if switch s2 in network has link to switch s3 by port number 5 then the adjacency matrix fill as adjacency[s2][s3] = 5
+        #we use this adjacency in dijkstra algorithm to find shortest path in network
         for s1, s2, port1, port2 in mylinks:
             adjacency[s1][s2]= port1
             adjacency[s2][s1]= port2
@@ -326,6 +338,10 @@ class ProjectController(app_manager.RyuApp):
         for key in adjacency:
             print (key, ":", adjacency[key])
 
+        #sometimes in running mininet with remote controller controller.py, connection between mininet and ryu isn't become stable
+        #so in this moments get_link function can't get links in network and mylinks and adjacency matrix become null
+        #becuase of that program doesn't work well and mininet host can't get packets and packets lost become 100%
+        #so this part of code warn and abort the program
         if not adjacency:
             print("coudl'nt get links from  mininet")
             print("this is not our fault :)\nplease try running again !")
