@@ -6,8 +6,7 @@ and fix some of its bug!
 If you want to test the code, first you need to open a terminal bash and write:\
  ```sudo mn --topo tree,3  --mac --switch ovsk --controller remote -x && sudo mn -c```\
 if you want to run on a custom topology the write:\
- ```sudo mn --custom ./customTopo.py --topo mytopo --mac --switch ovsk --controller remote -x && sudo mn -c
-```\
+ ```sudo mn --custom ./customTopo.py --topo mytopo --mac --switch ovsk --controller remote -x && sudo mn -c```\
 then goto the controller:c0 and write:\
  ```ryu-manager --verbose ryu/app/controller.py --observe-links```\
 then you can write in mininet terminal:\
